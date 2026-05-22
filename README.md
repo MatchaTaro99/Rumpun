@@ -35,6 +35,9 @@ Rumpun adalah pondasi awal untuk aplikasi silsilah keluarga digital.
 - `npm run build` membuat build frontend.
 - `npm run lint` memeriksa kualitas kode.
 - `npm run format:check` memeriksa format file.
+- `npm run db:generate` membuat Prisma Client dari schema database.
+- `npm run db:migrate` menjalankan migrasi database lokal.
+- `npm run db:seed` mengisi data contoh keluarga dan role dasar.
 
 ## Endpoint Awal
 
@@ -42,3 +45,8 @@ Rumpun adalah pondasi awal untuk aplikasi silsilah keluarga digital.
 - `GET http://localhost:3001/api/health`
 - `http://localhost:5173` untuk UI frontend
 
+## Database
+
+- Schema Prisma berada di `backend/prisma/schema.prisma`.
+- Migration awal berada di `backend/prisma/migrations/20260522130000_initial_schema/`.
+- Seed data menyiapkan contoh keluarga tiga generasi untuk pengujian pohon silsilah.
