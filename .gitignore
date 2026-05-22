@@ -6,5 +6,5 @@ coverage
 .env
 frontend/.env
 backend/.env
+backend/prisma/generated
 .vite
-

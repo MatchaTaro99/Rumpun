@@ -11,6 +11,11 @@
     "dev": "node scripts/dev.mjs",
     "dev:frontend": "npm run dev --workspace frontend",
     "dev:backend": "npm run dev --workspace backend",
+    "db:generate": "npm run prisma:generate --workspace backend",
+    "db:migrate": "npm run prisma:migrate --workspace backend",
+    "db:migrate:deploy": "npm run prisma:migrate:deploy --workspace backend",
+    "db:seed": "npm run prisma:seed --workspace backend",
+    "db:studio": "npm run prisma:studio --workspace backend",
     "build": "npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "format": "prettier --write .",
@@ -23,4 +28,3 @@
     "prettier": "^3.0.0"
   }
 }
-
