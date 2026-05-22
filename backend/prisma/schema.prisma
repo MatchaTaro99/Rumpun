@@ -34,6 +34,11 @@ enum InvitationStatus {
   EXPIRED
 }
 
+enum InvitationDeliveryMode {
+  LINK
+  CODE
+}
+
 enum AuditAction {
   CREATE
   UPDATE
@@ -46,61 +51,61 @@ enum AuditAction {
 }
 
 model Role {
-  id          String        @id @default(cuid())
-  code        String        @unique
+  id          String       @id @default(cuid())
+  code        String       @unique
   name        String
   description String?
   users       User[]
   invitations Invitation[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   @@map("roles")
 }
 
 model FamilyBranch {
-  id           String                    @id @default(cuid())
+  id           String                @id @default(cuid())
   name         String
   description  String?
-  code         String                    @unique
-  rootMemberId  String?                  @unique
-  rootMember    FamilyMember?            @relation("BranchRoot", fields: [rootMemberId], references: [id], onDelete: SetNull)
+  code         String                @unique
+  rootMemberId String?               @unique
+  rootMember   FamilyMember?         @relation("BranchRoot", fields: [rootMemberId], references: [id], onDelete: SetNull)
   members      FamilyMember[]
   parentLinks  ParentChildRelation[]
   spouseLinks  SpouseRelation[]
   users        User[]
   invitations  Invitation[]
   auditLogs    AuditLog[]
-  createdAt    DateTime                  @default(now())
-  updatedAt    DateTime                  @updatedAt
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
 
   @@map("family_branches")
 }
 
 model FamilyMember {
-  id               String                    @id @default(cuid())
-  branchId         String?
-  branch           FamilyBranch?             @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  user             User?                     @relation("UserMember")
-  fullName         String
-  nickname         String?
-  gender           Gender
-  birthPlace       String?
-  birthDate        DateTime?
-  livingStatus     LivingStatus              @default(ALIVE)
-  deathDate        DateTime?
-  deathPlace       String?
-  deathCause       String?
-  burialPlace      String?
-  photoUrl         String?
-  sensitiveData    FamilyMemberSensitiveData?
-  asParent         ParentChildRelation[]      @relation("ParentMember")
-  asChild          ParentChildRelation[]      @relation("ChildMember")
-  spouseAsFirst    SpouseRelation[]           @relation("SpouseFirst")
-  spouseAsSecond   SpouseRelation[]           @relation("SpouseSecond")
-  branchRootOf     FamilyBranch?              @relation("BranchRoot")
-  createdAt        DateTime                   @default(now())
-  updatedAt        DateTime                   @updatedAt
+  id             String                     @id @default(cuid())
+  branchId       String?
+  branch         FamilyBranch?              @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  user           User?                      @relation("UserMember")
+  fullName       String
+  nickname       String?
+  gender         Gender
+  birthPlace     String?
+  birthDate      DateTime?
+  livingStatus   LivingStatus               @default(ALIVE)
+  deathDate      DateTime?
+  deathPlace     String?
+  deathCause     String?
+  burialPlace    String?
+  photoUrl       String?
+  sensitiveData  FamilyMemberSensitiveData?
+  asParent       ParentChildRelation[]      @relation("ParentMember")
+  asChild        ParentChildRelation[]      @relation("ChildMember")
+  spouseAsFirst  SpouseRelation[]           @relation("SpouseFirst")
+  spouseAsSecond SpouseRelation[]           @relation("SpouseSecond")
+  branchRootOf   FamilyBranch?              @relation("BranchRoot")
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
 
   @@index([branchId])
   @@map("family_members")
@@ -109,12 +114,12 @@ model FamilyMember {
 model FamilyMemberSensitiveData {
   id                     String       @id @default(cuid())
   memberId               String       @unique
-  member                 FamilyMember  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  member                 FamilyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
   contactEmailCiphertext Bytes?
-  contactPhoneCiphertext  Bytes?
-  occupationCiphertext    Bytes?
-  residenceCiphertext     Bytes?
-  biographyCiphertext     Bytes?
+  contactPhoneCiphertext Bytes?
+  occupationCiphertext   Bytes?
+  residenceCiphertext    Bytes?
+  biographyCiphertext    Bytes?
   encryptionVersion      Int          @default(1)
   algorithm              String       @default("placeholder")
   createdAt              DateTime     @default(now())
@@ -124,16 +129,16 @@ model FamilyMemberSensitiveData {
 }
 
 model ParentChildRelation {
-  id                String              @id @default(cuid())
-  branchId          String?
-  branch            FamilyBranch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  parentMemberId    String
-  parentMember      FamilyMember        @relation("ParentMember", fields: [parentMemberId], references: [id], onDelete: Cascade)
-  childMemberId     String
-  childMember       FamilyMember        @relation("ChildMember", fields: [childMemberId], references: [id], onDelete: Cascade)
-  relationKind      ParentChildRelationKind @default(BIOLOGICAL)
-  notes             String?
-  createdAt         DateTime            @default(now())
+  id             String                  @id @default(cuid())
+  branchId       String?
+  branch         FamilyBranch?           @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  parentMemberId String
+  parentMember   FamilyMember            @relation("ParentMember", fields: [parentMemberId], references: [id], onDelete: Cascade)
+  childMemberId  String
+  childMember    FamilyMember            @relation("ChildMember", fields: [childMemberId], references: [id], onDelete: Cascade)
+  relationKind   ParentChildRelationKind @default(BIOLOGICAL)
+  notes          String?
+  createdAt      DateTime                @default(now())
 
   @@unique([parentMemberId, childMemberId])
   @@index([branchId])
@@ -141,18 +146,18 @@ model ParentChildRelation {
 }
 
 model SpouseRelation {
-  id               String         @id @default(cuid())
-  branchId         String?
-  branch           FamilyBranch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  pairKey          String         @unique
-  partnerOneId     String
-  partnerOne       FamilyMember   @relation("SpouseFirst", fields: [partnerOneId], references: [id], onDelete: Cascade)
-  partnerTwoId     String
-  partnerTwo       FamilyMember   @relation("SpouseSecond", fields: [partnerTwoId], references: [id], onDelete: Cascade)
-  marriedAt        DateTime?
-  separatedAt      DateTime?
-  notes            String?
-  createdAt        DateTime       @default(now())
+  id           String        @id @default(cuid())
+  branchId     String?
+  branch       FamilyBranch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  pairKey      String        @unique
+  partnerOneId String
+  partnerOne   FamilyMember  @relation("SpouseFirst", fields: [partnerOneId], references: [id], onDelete: Cascade)
+  partnerTwoId String
+  partnerTwo   FamilyMember  @relation("SpouseSecond", fields: [partnerTwoId], references: [id], onDelete: Cascade)
+  marriedAt    DateTime?
+  separatedAt  DateTime?
+  notes        String?
+  createdAt    DateTime      @default(now())
 
   @@unique([partnerOneId, partnerTwoId])
   @@index([branchId])
@@ -160,83 +165,122 @@ model SpouseRelation {
 }
 
 model User {
-  id                  String                   @id @default(cuid())
+  id                  String                  @id @default(cuid())
   branchId            String?
-  branch              FamilyBranch?            @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  branch              FamilyBranch?           @relation(fields: [branchId], references: [id], onDelete: SetNull)
   roleId              String
-  role                Role                     @relation(fields: [roleId], references: [id], onDelete: Restrict)
-  memberId            String?                  @unique
-  member              FamilyMember?            @relation("UserMember", fields: [memberId], references: [id], onDelete: SetNull)
-  email               String                   @unique
+  role                Role                    @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  memberId            String?                 @unique
+  member              FamilyMember?           @relation("UserMember", fields: [memberId], references: [id], onDelete: SetNull)
+  email               String                  @unique
   displayName         String
   passwordHash        String
-  isActive            Boolean                  @default(true)
+  isActive            Boolean                 @default(true)
   lastLoginAt         DateTime?
   sessionConfig       SessionConfig?
+  authSessions        AuthSession[]
+  passwordResetTokens PasswordResetToken[]
   notificationPref    NotificationPreference?
-  sentInvitations     Invitation[]             @relation("InvitationSender")
-  acceptedInvitations  Invitation[]             @relation("InvitationAcceptedBy")
-  auditLogs           AuditLog[]               @relation("AuditActor")
-  createdAt           DateTime                 @default(now())
-  updatedAt           DateTime                 @updatedAt
+  sentInvitations     Invitation[]            @relation("InvitationSender")
+  acceptedInvitations Invitation[]            @relation("InvitationAcceptedBy")
+  auditLogs           AuditLog[]              @relation("AuditActor")
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
 
   @@index([branchId])
   @@map("users")
 }
 
 model SessionConfig {
-  id                   String   @id @default(cuid())
-  userId               String   @unique
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  idleTimeoutMinutes   Int      @default(30)
-  maxSessionHours      Int      @default(12)
-  largeTextMode        Boolean  @default(false)
-  highContrastMode     Boolean  @default(false)
-  reducedMotionMode    Boolean  @default(false)
-  preferredLanguage    String   @default("id")
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  idleTimeoutMinutes Int      @default(30)
+  maxSessionHours    Int      @default(12)
+  largeTextMode      Boolean  @default(false)
+  highContrastMode   Boolean  @default(false)
+  reducedMotionMode  Boolean  @default(false)
+  preferredLanguage  String   @default("id")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@map("session_configs")
 }
 
+model AuthSession {
+  id                 String    @id @default(cuid())
+  userId             String
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jti                String    @unique
+  idleTimeoutMinutes Int
+  expiresAt          DateTime
+  lastUsedAt         DateTime  @default(now())
+  revokedAt          DateTime?
+  ipAddress          String?
+  userAgent          String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("auth_sessions")
+}
+
+model PasswordResetToken {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash      String    @unique
+  requestedEmail String
+  expiresAt      DateTime
+  usedAt         DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+
 model NotificationPreference {
-  id                 String                @id @default(cuid())
-  userId             String                @unique
-  user               User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  emailEnabled      Boolean               @default(true)
-  smsEnabled        Boolean               @default(false)
-  pushEnabled       Boolean               @default(false)
-  inAppEnabled      Boolean               @default(true)
-  familyUpdates      Boolean               @default(true)
-  birthdayReminders  Boolean               @default(true)
-  relationRequests   Boolean               @default(true)
-  invitationAlerts   Boolean               @default(true)
-  digestEnabled      Boolean               @default(false)
-  createdAt          DateTime              @default(now())
-  updatedAt          DateTime              @updatedAt
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailEnabled      Boolean  @default(true)
+  smsEnabled        Boolean  @default(false)
+  pushEnabled       Boolean  @default(false)
+  inAppEnabled      Boolean  @default(true)
+  familyUpdates     Boolean  @default(true)
+  birthdayReminders Boolean  @default(true)
+  relationRequests  Boolean  @default(true)
+  invitationAlerts  Boolean  @default(true)
+  digestEnabled     Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@map("notification_preferences")
 }
 
 model Invitation {
-  id              String           @id @default(cuid())
-  branchId        String?
-  branch          FamilyBranch?    @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  roleId          String
-  role            Role             @relation(fields: [roleId], references: [id], onDelete: Restrict)
-  sentByUserId    String?
-  sentByUser      User?            @relation("InvitationSender", fields: [sentByUserId], references: [id], onDelete: SetNull)
-  inviteeEmail    String
-  inviteToken     String           @unique
-  status          InvitationStatus @default(PENDING)
-  expiresAt       DateTime
-  acceptedAt      DateTime?
+  id               String                 @id @default(cuid())
+  branchId         String?
+  branch           FamilyBranch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  roleId           String
+  role             Role                   @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  sentByUserId     String?
+  sentByUser       User?                  @relation("InvitationSender", fields: [sentByUserId], references: [id], onDelete: SetNull)
+  inviteeEmail     String
+  inviteCode       String                 @unique
+  inviteToken      String                 @unique
+  deliveryMode     InvitationDeliveryMode @default(LINK)
+  status           InvitationStatus       @default(PENDING)
+  expiresAt        DateTime
+  acceptedAt       DateTime?
   acceptedByUserId String?
-  acceptedByUser  User?            @relation("InvitationAcceptedBy", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
-  note            String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  acceptedByUser   User?                  @relation("InvitationAcceptedBy", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+  note             String?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
 
   @@index([branchId])
   @@map("invitations")
@@ -245,7 +289,7 @@ model Invitation {
 model AuditLog {
   id             String        @id @default(cuid())
   branchId       String?
-  branch         FamilyBranch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  branch         FamilyBranch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
   actorUserId    String?
   actorUser      User?         @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
   action         AuditAction

@@ -43,10 +43,27 @@ Rumpun adalah pondasi awal untuk aplikasi silsilah keluarga digital.
 
 - `GET http://localhost:3001/health`
 - `GET http://localhost:3001/api/health`
+- `POST http://localhost:3001/api/auth/login`
+- `POST http://localhost:3001/api/auth/logout`
+- `GET http://localhost:3001/api/auth/me`
+- `POST http://localhost:3001/api/auth/invitations/accept`
+- `POST http://localhost:3001/api/auth/password-reset/request`
+- `POST http://localhost:3001/api/auth/password-reset/confirm`
+- `POST http://localhost:3001/api/admin/invitations`
+- `GET http://localhost:3001/admin`
 - `http://localhost:5173` untuk UI frontend
+
+Catatan: endpoint yang dilindungi memakai header `Authorization: Bearer <token>`.
+
+## Akun Contoh
+
+- `superadmin@rumpun.local` / `SuperAdmin123!`
+- `admin.cabang@rumpun.local` / `AdminCabang123!`
+- `anggota@rumpun.local` / `Anggota123!`
+- `tamu@rumpun.local` / `Tamu123!`
 
 ## Database
 
 - Schema Prisma berada di `backend/prisma/schema.prisma`.
-- Migration awal berada di `backend/prisma/migrations/20260522130000_initial_schema/`.
-- Seed data menyiapkan contoh keluarga tiga generasi untuk pengujian pohon silsilah.
+- Migration bertahap berada di `backend/prisma/migrations/`.
+- Seed data menyiapkan contoh keluarga tiga generasi, role RBAC, akun login, dan undangan uji.

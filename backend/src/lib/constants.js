@@ -1,0 +1,12 @@
+export const ROLE_CODES = {
+  SUPER_ADMIN: 'SUPER_ADMIN',
+  BRANCH_ADMIN: 'BRANCH_ADMIN',
+  MEMBER: 'MEMBER',
+  GUEST: 'GUEST',
+};
+
+export const INVITATION_DELIVERY_MODES = {
+  LINK: 'LINK',
+  CODE: 'CODE',
+};
+

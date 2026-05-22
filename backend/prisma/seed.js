@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 
 const connectionString = process.env.DATABASE_URL;
@@ -10,17 +11,19 @@ if (!connectionString) {
 const prisma = new PrismaClient();
 
 const encrypt = (value) => Buffer.from(`enc:${value}`, 'utf8');
-const makePairKey = (firstId, secondId) =>
-  [firstId, secondId].sort().join('::');
+const hashPassword = (value) => bcrypt.hashSync(value, 10);
+const makePairKey = (firstId, secondId) => [firstId, secondId].sort().join('::');
 
 async function main() {
   await prisma.$transaction([
     prisma.auditLog.deleteMany(),
+    prisma.passwordResetToken.deleteMany(),
+    prisma.authSession.deleteMany(),
     prisma.spouseRelation.deleteMany(),
     prisma.parentChildRelation.deleteMany(),
     prisma.familyMemberSensitiveData.deleteMany(),
-    prisma.sessionConfig.deleteMany(),
     prisma.notificationPreference.deleteMany(),
+    prisma.sessionConfig.deleteMany(),
     prisma.invitation.deleteMany(),
     prisma.user.deleteMany(),
     prisma.familyMember.deleteMany(),
@@ -28,26 +31,33 @@ async function main() {
     prisma.role.deleteMany(),
   ]);
 
-  const roles = await prisma.$transaction([
+  const [superAdminRole, branchAdminRole, memberRole, guestRole] = await prisma.$transaction([
     prisma.role.create({
       data: {
-        code: 'ADMIN',
-        name: 'Administrator',
-        description: 'Mengelola data keluarga, anggota, dan akses sistem.',
+        code: 'SUPER_ADMIN',
+        name: 'Super Admin',
+        description: 'Mengelola seluruh sistem, cabang keluarga, dan undangan.',
       },
     }),
     prisma.role.create({
       data: {
-        code: 'EDITOR',
-        name: 'Editor Keluarga',
-        description: 'Bisa menambah dan memperbarui data anggota.',
+        code: 'BRANCH_ADMIN',
+        name: 'Admin Cabang',
+        description: 'Mengelola satu cabang keluarga dan anggota di cabang tersebut.',
       },
     }),
     prisma.role.create({
       data: {
-        code: 'VIEWER',
-        name: 'Pembaca',
-        description: 'Hanya melihat data keluarga dan pohon silsilah.',
+        code: 'MEMBER',
+        name: 'Anggota',
+        description: 'Bisa mengakses data keluarga sesuai izin cabang.',
+      },
+    }),
+    prisma.role.create({
+      data: {
+        code: 'GUEST',
+        name: 'Tamu',
+        description: 'Akses terbatas untuk melihat informasi yang dibagikan.',
       },
     }),
   ]);
@@ -235,14 +245,12 @@ async function main() {
     data: { rootMemberId: grandfather.id },
   });
 
-  const admin = await prisma.user.create({
+  const superAdmin = await prisma.user.create({
     data: {
-      branchId: branch.id,
-      roleId: roles[0].id,
-      memberId: father.id,
-      email: 'admin@rumpun.local',
-      displayName: 'Admin Rumpun',
-      passwordHash: '$2b$10$placeholder.hash.for.seed.only',
+      roleId: superAdminRole.id,
+      email: 'superadmin@rumpun.local',
+      displayName: 'Super Admin Rumpun',
+      passwordHash: hashPassword('SuperAdmin123!'),
       sessionConfig: {
         create: {
           idleTimeoutMinutes: 30,
@@ -255,7 +263,10 @@ async function main() {
       },
       notificationPref: {
         create: {
-          channels: ['IN_APP', 'EMAIL'],
+          emailEnabled: true,
+          smsEnabled: false,
+          pushEnabled: false,
+          inAppEnabled: true,
           familyUpdates: true,
           birthdayReminders: true,
           relationRequests: true,
@@ -269,11 +280,11 @@ async function main() {
   await prisma.user.create({
     data: {
       branchId: branch.id,
-      roleId: roles[1].id,
-      memberId: mother.id,
-      email: 'editor@rumpun.local',
-      displayName: 'Editor Rumpun',
-      passwordHash: '$2b$10$placeholder.hash.for.seed.only',
+      roleId: branchAdminRole.id,
+      memberId: father.id,
+      email: 'admin.cabang@rumpun.local',
+      displayName: 'Admin Cabang',
+      passwordHash: hashPassword('AdminCabang123!'),
       sessionConfig: {
         create: {
           idleTimeoutMinutes: 30,
@@ -286,27 +297,114 @@ async function main() {
       },
       notificationPref: {
         create: {
-          channels: ['IN_APP'],
+          emailEnabled: true,
+          smsEnabled: false,
+          pushEnabled: false,
+          inAppEnabled: true,
           familyUpdates: true,
           birthdayReminders: true,
           relationRequests: true,
-          invitationAlerts: false,
+          invitationAlerts: true,
           digestEnabled: true,
         },
       },
     },
   });
 
-  await prisma.invitation.create({
+  await prisma.user.create({
     data: {
       branchId: branch.id,
-      roleId: roles[2].id,
-      sentByUserId: admin.id,
-      inviteeEmail: 'keluarga-baru@example.com',
-      inviteToken: 'invite-token-rumpun-001',
+      roleId: memberRole.id,
+      memberId: childOne.id,
+      email: 'anggota@rumpun.local',
+      displayName: 'Anggota Keluarga',
+      passwordHash: hashPassword('Anggota123!'),
+      sessionConfig: {
+        create: {
+          idleTimeoutMinutes: 45,
+          maxSessionHours: 8,
+          largeTextMode: true,
+          highContrastMode: false,
+          reducedMotionMode: false,
+          preferredLanguage: 'id',
+        },
+      },
+      notificationPref: {
+        create: {
+          emailEnabled: true,
+          smsEnabled: false,
+          pushEnabled: false,
+          inAppEnabled: true,
+          familyUpdates: true,
+          birthdayReminders: true,
+          relationRequests: true,
+          invitationAlerts: true,
+          digestEnabled: false,
+        },
+      },
+    },
+  });
+
+  await prisma.user.create({
+    data: {
+      branchId: null,
+      roleId: guestRole.id,
+      email: 'tamu@rumpun.local',
+      displayName: 'Tamu Rumpun',
+      passwordHash: hashPassword('Tamu123!'),
+      sessionConfig: {
+        create: {
+          idleTimeoutMinutes: 15,
+          maxSessionHours: 4,
+          largeTextMode: false,
+          highContrastMode: false,
+          reducedMotionMode: false,
+          preferredLanguage: 'id',
+        },
+      },
+      notificationPref: {
+        create: {
+          emailEnabled: false,
+          smsEnabled: false,
+          pushEnabled: false,
+          inAppEnabled: true,
+          familyUpdates: false,
+          birthdayReminders: false,
+          relationRequests: false,
+          invitationAlerts: true,
+          digestEnabled: false,
+        },
+      },
+    },
+  });
+
+  const inviteToMember = await prisma.invitation.create({
+    data: {
+      branchId: branch.id,
+      roleId: memberRole.id,
+      sentByUserId: superAdmin.id,
+      inviteeEmail: 'anggota-baru@example.com',
+      inviteCode: 'ANGGOTA-RAHMAN',
+      inviteToken: 'invite-token-member-rahman',
+      deliveryMode: 'LINK',
       status: 'PENDING',
       expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
-      note: 'Undangan akses baca untuk anggota keluarga baru.',
+      note: 'Undangan link untuk anggota keluarga baru.',
+    },
+  });
+
+  const inviteToGuest = await prisma.invitation.create({
+    data: {
+      branchId: branch.id,
+      roleId: guestRole.id,
+      sentByUserId: superAdmin.id,
+      inviteeEmail: '*',
+      inviteCode: 'TAMU-RAHMAN',
+      inviteToken: 'invite-token-guest-rahman',
+      deliveryMode: 'CODE',
+      status: 'PENDING',
+      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+      note: 'Undangan kode untuk tamu keluarga.',
     },
   });
 
@@ -314,7 +412,7 @@ async function main() {
     data: [
       {
         branchId: branch.id,
-        actorUserId: admin.id,
+        actorUserId: superAdmin.id,
         action: 'CREATE',
         entityType: 'FamilyBranch',
         entityId: branch.id,
@@ -326,7 +424,7 @@ async function main() {
       },
       {
         branchId: branch.id,
-        actorUserId: admin.id,
+        actorUserId: superAdmin.id,
         action: 'CREATE',
         entityType: 'FamilyMember',
         entityId: father.id,
@@ -336,14 +434,56 @@ async function main() {
           generation: 2,
         },
       },
+      {
+        branchId: branch.id,
+        actorUserId: superAdmin.id,
+        action: 'INVITE',
+        entityType: 'Invitation',
+        entityId: inviteToMember.id,
+        summary: 'Undangan anggota baru dibuat.',
+        afterSnapshot: {
+          role: memberRole.code,
+          deliveryMode: 'LINK',
+        },
+      },
+      {
+        branchId: branch.id,
+        actorUserId: superAdmin.id,
+        action: 'INVITE',
+        entityType: 'Invitation',
+        entityId: inviteToGuest.id,
+        summary: 'Undangan tamu keluarga dibuat.',
+        afterSnapshot: {
+          role: guestRole.code,
+          deliveryMode: 'CODE',
+        },
+      },
     ],
   });
 
   console.log('Seed completed:', {
     branch: branch.name,
-    roles: roles.length,
-    members: 6,
-    users: 2,
+    roles: 4,
+    members: 7,
+    users: 4,
+    accounts: {
+      superAdmin: {
+        email: 'superadmin@rumpun.local',
+        password: 'SuperAdmin123!',
+      },
+      branchAdmin: {
+        email: 'admin.cabang@rumpun.local',
+        password: 'AdminCabang123!',
+      },
+      member: {
+        email: 'anggota@rumpun.local',
+        password: 'Anggota123!',
+      },
+      guest: {
+        email: 'tamu@rumpun.local',
+        password: 'Tamu123!',
+      },
+    },
   });
 }
 
